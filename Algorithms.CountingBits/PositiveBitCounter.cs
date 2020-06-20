@@ -11,7 +11,25 @@ namespace Algorithms.CountingBits
     {
         public IEnumerable<int> Count(int input)
         {
-            throw new NotImplementedException();
+            if (input < 0)
+                throw new ArgumentException("The input should be a non-negative number", nameof(input));
+
+            var result = new LinkedList<int>();
+
+            var bitsCount = 0;
+            var missingBits = input;
+            for (int i = 0; missingBits != 0 && i < sizeof(int) * 8 - 1; i++)
+            {
+                if ((missingBits & 1) == 1)
+                {
+                    bitsCount++;
+                    result.AddLast(i);
+                }
+                missingBits >>= 1;
+            }
+            result.AddFirst(bitsCount);
+
+            return result;
         }
     }
 }
