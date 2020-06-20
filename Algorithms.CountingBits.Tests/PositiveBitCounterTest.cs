@@ -6,6 +6,7 @@ namespace Algorithms.CountingBits.Tests
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -56,5 +57,6 @@ namespace Algorithms.CountingBits.Tests
                 actual: this.bitCounter.Count(int.MaxValue).ToList(),
                 message: "The result is not the expected");
         }
+
     }
 }

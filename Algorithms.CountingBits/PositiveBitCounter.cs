@@ -6,6 +6,7 @@ namespace Algorithms.CountingBits
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     public class PositiveBitCounter
     {
@@ -14,22 +15,22 @@ namespace Algorithms.CountingBits
             if (input < 0)
                 throw new ArgumentException("The input should be a non-negative number", nameof(input));
 
-            var result = new LinkedList<int>();
+            var result = new int[32];
 
             var bitsCount = 0;
             var missingBits = input;
-            for (int i = 0; missingBits != 0 && i < 32; i++)
+            for (int currentBit = 0; missingBits != 0 && currentBit < 32; currentBit++)
             {
-                if ((missingBits & 1) == 1)
+                if ((missingBits % 2) == 1)
                 {
                     bitsCount++;
-                    result.AddLast(i);
+                    result[bitsCount] = currentBit;
                 }
                 missingBits >>= 1;
             }
-            result.AddFirst(bitsCount);
+            result[0] = bitsCount;
 
-            return result;
+            return result.Take(result[0] + 1);
         }
     }
 }
