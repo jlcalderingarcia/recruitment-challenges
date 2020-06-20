@@ -47,5 +47,14 @@ namespace Algorithms.CountingBits.Tests
                 actual: this.bitCounter.Count(161).ToList(),
                 message: "The result is not the expected");
         }
+
+        [TestMethod]
+        public void Count_MaxInput_AllOcurrences()
+        {
+            CollectionAssert.AreEqual(
+                expected: new List<int>(Enumerable.Concat(new List<int> { 31 }, Enumerable.Range(0, 31))),
+                actual: this.bitCounter.Count(int.MaxValue).ToList(),
+                message: "The result is not the expected");
+        }
     }
 }

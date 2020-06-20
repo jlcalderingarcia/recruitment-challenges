@@ -18,7 +18,7 @@ namespace Algorithms.CountingBits
 
             var bitsCount = 0;
             var missingBits = input;
-            for (int i = 0; missingBits != 0 && i < sizeof(int) * 8 - 1; i++)
+            for (int i = 0; missingBits != 0 && i < 32; i++)
             {
                 if ((missingBits & 1) == 1)
                 {
