@@ -14,6 +14,8 @@ using Refactoring.FraudDetection.Parsing;
 
 namespace Refactoring.FraudDetection.Tests
 {
+    // This test classs was renamed since the FraudRadar class was decomposed in different components
+    // and the tests in this file checks the functionality of all of them togheter
     [TestClass]
     public class FraudRadarIntegrationTests
     {

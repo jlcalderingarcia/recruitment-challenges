@@ -1,11 +1,10 @@
-﻿using System.Runtime.CompilerServices;
-[assembly: InternalsVisibleTo("Refactoring.FraudDetection.Tests")]
-
-namespace Refactoring.FraudDetection.Entities
+﻿namespace Refactoring.FraudDetection.Entities
 {
+    // This entity is intended to be created only the the Normalization classs,
+    // but it would increase the tests complexity
     public class NormalizedOrder : Order
     {
-        internal NormalizedOrder(
+        public NormalizedOrder(
             int orderId,
             int dealId,
             string email,

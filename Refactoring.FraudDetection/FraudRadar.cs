@@ -23,6 +23,10 @@ namespace Refactoring.FraudDetection
                 throw new ArgumentException("The list of fraud rules should not be empty", nameof(fraudRules));
         }
 
+        // The check fraud mechanism was refactored but not changed
+        // since the domain rules and final expectations are not clear enough
+        // There are several improvements that can be applied to decrease the computational complexity of the algorithm
+        // But I guess the more important task is the refactoring
         public IEnumerable<FraudResult> Check(IEnumerable<NormalizedOrder> orders)
         {
             var ordersList = orders.ToList();
