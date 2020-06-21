@@ -6,117 +6,43 @@ namespace Refactoring.FraudDetection
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
+    using System.Linq;
+    using Refactoring.FraudDetection.Entities;
+    using Refactoring.FraudDetection.FraudRules;
 
-    public class FraudRadar
+    public class FraudRadar : IFraudRadar
     {
-        public IEnumerable<FraudResult> Check(string filePath)
+        private readonly List<IFraudRule> _fraudRules;
+
+        public FraudRadar(
+            IEnumerable<IFraudRule> fraudRules
+        ) {
+            _fraudRules = fraudRules?.ToList() ?? throw new ArgumentNullException(nameof(fraudRules));
+
+            if (fraudRules.Count() == 0)
+                throw new ArgumentException("The list of fraud rules should not be empty", nameof(fraudRules));
+        }
+
+        public IEnumerable<FraudResult> Check(IEnumerable<NormalizedOrder> orders)
         {
-            // READ FRAUD LINES
-            var orders = new List<Order>();
+            var ordersList = orders.ToList();
             var fraudResults = new List<FraudResult>();
 
-            var lines = File.ReadAllLines(filePath);
-
-            foreach (var line in lines)
-            {
-                var items = line.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-
-                var order = new Order
-                {
-                    OrderId = int.Parse(items[0]),
-                    DealId = int.Parse(items[1]),
-                    Email = items[2].ToLower(),
-                    Street = items[3].ToLower(),
-                    City = items[4].ToLower(),
-                    State = items[5].ToLower(),
-                    ZipCode = items[6],
-                    CreditCard = items[7]
-                };
-
-                orders.Add(order);
-            }
-
-            // NORMALIZE
-            foreach (var order in orders)
-            {
-                //Normalize email
-                var aux = order.Email.Split(new char[] { '@' }, StringSplitOptions.RemoveEmptyEntries);
-
-                var atIndex = aux[0].IndexOf("+", StringComparison.Ordinal);
-
-                aux[0] = atIndex < 0 ? aux[0].Replace(".", "") : aux[0].Replace(".", "").Remove(atIndex);
-
-                order.Email = string.Join("@", new string[] { aux[0], aux[1] });
-
-                //Normalize street
-                order.Street = order.Street.Replace("st.", "street").Replace("rd.", "road");
-
-                //Normalize state
-                order.State = order.State.Replace("il", "illinois").Replace("ca", "california").Replace("ny", "new york");
-            }
-
             // CHECK FRAUD
-            for (int i = 0; i < orders.Count; i++)
+            for (int i = 0; i < ordersList.Count; i++)
             {
-                var current = orders[i];
-                bool isFraudulent = false;
+                var current = ordersList[i];
 
-                for (int j = i + 1; j < orders.Count; j++)
+                for (int j = i + 1; j < ordersList.Count; j++)
                 {
-                    isFraudulent = false;
-
-                    if (current.DealId == orders[j].DealId
-                        && current.Email == orders[j].Email
-                        && current.CreditCard != orders[j].CreditCard)
+                    if (_fraudRules.Any(fraudRule => fraudRule.HaveFraudulentData(current, ordersList[j])))
                     {
-                        isFraudulent = true;
-                    }
-
-                    if (current.DealId == orders[j].DealId
-                        && current.State == orders[j].State
-                        && current.ZipCode == orders[j].ZipCode
-                        && current.Street == orders[j].Street
-                        && current.City == orders[j].City
-                        && current.CreditCard != orders[j].CreditCard)
-                    {
-                        isFraudulent = true;
-                    }
-
-                    if (isFraudulent)
-                    {
-                        fraudResults.Add(new FraudResult { IsFraudulent = true, OrderId = orders[j].OrderId });
+                        fraudResults.Add(new FraudResult(ordersList[j].OrderId, true));
                     }
                 }
             }
 
             return fraudResults;
-        }
-
-        public class FraudResult
-        {
-            public int OrderId { get; set; }
-
-            public bool IsFraudulent { get; set; }
-        }
-
-        public class Order
-        {
-            public int OrderId { get; set; }
-
-            public int DealId { get; set; }
-
-            public string Email { get; set; }
-
-            public string Street { get; set; }
-
-            public string City { get; set; }
-
-            public string State { get; set; }
-
-            public string ZipCode { get; set; }
-
-            public string CreditCard { get; set; }
         }
     }
 }

@@ -1,68 +1,146 @@
-﻿// <copyright file="FraudRadarTests.cs" company="Payvision">
-// Copyright (c) Payvision. All rights reserved.
-// </copyright>
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using Refactoring.FraudDetection.Entities;
+using Refactoring.FraudDetection.FraudRules;
 
 namespace Refactoring.FraudDetection.Tests
 {
     [TestClass]
     public class FraudRadarTests
     {
-        [TestMethod]
-        [DeploymentItem("./Files/OneLineFile.txt", "Files")]
-        public void CheckFraud_OneLineFile_NoFraudExpected()
-        {
-            var result = ExecuteTest(Path.Combine(Environment.CurrentDirectory, "Files", "OneLineFile.txt"));
+        private readonly IFraudRadar _fraudRadar;
+        private readonly List<IFraudRule> _fraudRules;
+        private readonly Mock<IFraudRule> _fraudRuleMock;
 
-            result.Should().NotBeNull("The result should not be null.");
-            result.Should().HaveCount(0, "The result should not contains fraudulent lines");
+        public FraudRadarTests()
+        {
+            _fraudRuleMock = new Mock<IFraudRule>();
+            _fraudRules = new List<IFraudRule> {
+                                _fraudRuleMock.Object
+                            };
+
+            _fraudRadar = new FraudRadar(_fraudRules);
         }
 
         [TestMethod]
-        [DeploymentItem("./Files/TwoLines_FraudulentSecond.txt", "Files")]
-        public void CheckFraud_TwoLines_SecondLineFraudulent()
+        public void Ctor_GivenNullFraudRules_ThenThrowArgumentNullException()
         {
-            var result = ExecuteTest(Path.Combine(Environment.CurrentDirectory, "Files", "TwoLines_FraudulentSecond.txt"));
+            // Act
+            Action action = () => new FraudRadar(null);
 
-            result.Should().NotBeNull("The result should not be null.");
-            result.Should().HaveCount(1, "The result should contains the number of lines of the file");
-            result.First().IsFraudulent.Should().BeTrue("The first line is not fraudulent");
-            result.First().OrderId.Should().Be(2, "The first line is not fraudulent");
+            // Assert
+            action.Should().Throw<ArgumentNullException>();
         }
 
         [TestMethod]
-        [DeploymentItem("./Files/ThreeLines_FraudulentSecond.txt", "Files")]
-        public void CheckFraud_ThreeLines_SecondLineFraudulent()
+        public void Ctor_GivenEmptyFraudRules_ThenThrowArgumentException()
         {
-            var result = ExecuteTest(Path.Combine(Environment.CurrentDirectory, "Files", "ThreeLines_FraudulentSecond.txt"));
+            // Act
+            Action action = () => new FraudRadar(new List<IFraudRule>());
 
-            result.Should().NotBeNull("The result should not be null.");
-            result.Should().HaveCount(1, "The result should contains the number of lines of the file");
-            result.First().IsFraudulent.Should().BeTrue("The first line is not fraudulent");
-            result.First().OrderId.Should().Be(2, "The first line is not fraudulent");
+            // Assert
+            action.Should().Throw<ArgumentException>();
         }
 
         [TestMethod]
-        [DeploymentItem("./Files/FourLines_MoreThanOneFraudulent.txt", "Files")]
-        public void CheckFraud_FourLines_MoreThanOneFraudulent()
+        public void Check_GivenSingleOperation_ThenReturnsNoFraudResult()
         {
-            var result = ExecuteTest(Path.Combine(Environment.CurrentDirectory, "Files", "FourLines_MoreThanOneFraudulent.txt"));
+            // Arrange
+            var order = new NormalizedOrder(
+                        1,
+                        1,
+                        "a@a.com",
+                        "street",
+                        "city",
+                        "state",
+                        "32500",
+                        "1234-1234-1234-1234"
+                    );
 
-            result.Should().NotBeNull("The result should not be null.");
-            result.Should().HaveCount(2, "The result should contains the number of lines of the file");
+            // Act
+            var result = _fraudRadar.Check(new List<NormalizedOrder> { order });
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().HaveCount(0);
+            _fraudRuleMock.Verify(it => it.HaveFraudulentData(It.IsAny<NormalizedOrder>(), It.IsAny<NormalizedOrder>()), Times.Never);
         }
 
-        private static List<FraudRadar.FraudResult> ExecuteTest(string filePath)
+        [TestMethod]
+        public void Check_GivenTwoValidOperation_ThenReturnsNoFraudResult()
         {
-            var fraudRadar = new FraudRadar();
+            // Arrange
+            var order1 = new NormalizedOrder(
+                        1,
+                        1,
+                        "a@a.com",
+                        "street",
+                        "city",
+                        "state",
+                        "32500",
+                        "1234-1234-1234-1234"
+                    );
+            var order2 = new NormalizedOrder(
+                        2,
+                        2,
+                        "a@a.com",
+                        "street",
+                        "city",
+                        "state",
+                        "32500",
+                        "1234-1234-1234-1234"
+                    );
+            _fraudRuleMock.Setup(it => it.HaveFraudulentData(order1, order2))
+                .Returns(false);
 
-            return fraudRadar.Check(filePath).ToList();
+            // Act
+            var result = _fraudRadar.Check(new List<NormalizedOrder> { order1, order2 });
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().HaveCount(0);
+            _fraudRuleMock.Verify(it => it.HaveFraudulentData(order1, order2), Times.Once);
+        }
+
+        [TestMethod]
+        public void Check_GivenTwoInvalidOperation_ThenReturnsOneFraudResult()
+        {
+            // Arrange
+            var order1 = new NormalizedOrder(
+                        1,
+                        1,
+                        "a@a.com",
+                        "street",
+                        "city",
+                        "state",
+                        "32500",
+                        "1234-1234-1234-1234"
+                    );
+            var order2 = new NormalizedOrder(
+                        2,
+                        1,
+                        "a@a.com",
+                        "street",
+                        "city",
+                        "state",
+                        "32500",
+                        "1234-1234-1234-1234"
+                    );
+            _fraudRuleMock.Setup(it => it.HaveFraudulentData(order1, order2))
+                .Returns(true);
+
+            // Act
+            var result = _fraudRadar.Check(new List<NormalizedOrder> { order1, order2 });
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Should().HaveCount(1);
+            result.First().OrderId.Should().Be(2);
+            _fraudRuleMock.Verify(it => it.HaveFraudulentData(order1, order2), Times.Once);
         }
     }
 }
